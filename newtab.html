@@ -5,34 +5,141 @@
   <title>New Tab</title>
   <link rel="stylesheet" href="bookmarks-bar.css">
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      margin: 0;
-      background: #3b3b3f;
+      background: #1a1a1e;
       min-height: 100vh;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
     }
+
     #newtab-content {
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 80vh;
-      color: #888;
+      padding: 40px 20px;
+      gap: 32px;
     }
-    #newtab-content h1 {
-      font-size: 1.5rem;
+
+    /* Clock */
+    #clock {
+      font-size: 72px;
+      font-weight: 200;
+      letter-spacing: -2px;
+      color: #fff;
+      line-height: 1;
+    }
+
+    #date {
+      font-size: 16px;
       font-weight: 300;
-      color: #555;
+      color: #888;
+      margin-top: 8px;
     }
-    @media (prefers-color-scheme: light) {
-      body { background: #f5f5f5; }
-      #newtab-content h1 { color: #aaa; }
+
+    /* Search */
+    #search-form {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    #search {
+      width: 100%;
+      background: #2a2a2e;
+      border: 1px solid #3a3a3e;
+      border-radius: 24px;
+      padding: 14px 24px;
+      font-size: 15px;
+      color: #e0e0e0;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #search::placeholder {
+      color: #666;
+    }
+
+    #search:focus {
+      border-color: #555;
+      box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.15);
+    }
+
+    /* Quick links */
+    #quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      max-width: 600px;
+    }
+
+    .quick-link {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: #aaa;
+      font-size: 11px;
+      width: 72px;
+      transition: color 0.15s;
+    }
+
+    .quick-link:hover {
+      color: #fff;
+    }
+
+    .quick-link-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #2a2a2e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .quick-link:hover .quick-link-icon {
+      background: #353538;
+    }
+
+    .quick-link-icon img {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      object-fit: contain;
+    }
+
+    .quick-link-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 72px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <div id="newtab-content">
+    <div>
+      <div id="clock"></div>
+      <div id="date"></div>
+    </div>
+
+    <form id="search-form">
+      <input type="text" id="search" placeholder="Search the web..." autocomplete="off" autofocus>
+    </form>
+
+    <div id="quick-links"></div>
   </div>
+
   <script src="newtab.js"></script>
 </body>
 </html>

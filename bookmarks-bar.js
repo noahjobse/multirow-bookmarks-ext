@@ -18,20 +18,32 @@
   bar.id = "mrb-bar";
 
   function applySettings(settings) {
-    if (settings.bgColor) {
-      bar.style.background = settings.bgColor;
-      // Auto-detect light vs dark for text color
-      const r = parseInt(settings.bgColor.slice(1, 3), 16);
-      const g = parseInt(settings.bgColor.slice(3, 5), 16);
-      const b = parseInt(settings.bgColor.slice(5, 7), 16);
-      const lum = (r * 299 + g * 587 + b * 114) / 1000;
-      bar.classList.toggle("mrb-light", lum > 150);
+    if (settings.alignment) {
+      bar.style.justifyContent = settings.alignment;
     }
-    if (settings.rows) ROWS = settings.rows;
+    if (settings.textSize) {
+      bar.style.setProperty("--mrb-text-size", settings.textSize + "px");
+    }
+    if (settings.iconSize) {
+      bar.style.setProperty("--mrb-icon-size", settings.iconSize + "px");
+    }
+    if (settings.boldText !== undefined) {
+      bar.style.fontWeight = settings.boldText ? "600" : "normal";
+    }
   }
 
+  // Auto dark/light based on OS/browser theme
+  function applyTheme() {
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    bar.classList.toggle("mrb-light", !isDark);
+    bar.style.background = isDark ? "#3b3b3f" : "#f1f3f5";
+    bar.style.setProperty("--mrb-text", isDark ? "#cfd1d6" : "#444");
+  }
+  applyTheme();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+
   // Load settings
-  chrome.storage.sync.get({ bgColor: "#3b3b3f", rows: 2 }, (settings) => {
+  chrome.storage.sync.get({ alignment: "center", textSize: 13, iconSize: 20, boldText: false }, (settings) => {
     applySettings(settings);
   });
 
@@ -51,7 +63,8 @@
   function faviconUrl(url) {
     try {
       const u = new URL(url);
-      return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
+      if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return null;
+      return `https://icons.duckduckgo.com/ip3/${u.hostname}.ico`;
     } catch {
       return null;
     }
@@ -171,9 +184,8 @@
 
       const ph = document.createElement("span");
       ph.className = "mrb-favicon-placeholder";
-      ph.textContent = "📁";
+      ph.classList.add("mrb-folder-icon");
       ph.style.background = "none";
-      ph.style.fontSize = "13px";
       trigger.appendChild(ph);
 
       if (node.title) {
@@ -217,15 +229,8 @@
     if (!bookmarksBar || !bookmarksBar.children) return;
 
     const items = bookmarksBar.children;
-    const half = Math.ceil(items.length / ROWS);
 
-    items.forEach((node, i) => {
-      if (i === half) {
-        const br = document.createElement("div");
-        br.className = "mrb-row-break";
-        bar.appendChild(br);
-      }
-
+    items.forEach((node) => {
       const el = createBookmarkEl(node);
       if (el) bar.appendChild(el);
     });

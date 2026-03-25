@@ -25,22 +25,50 @@
   transform: translateY(-100%);
 }
 
+/* Light mode (auto-applied when bg is light) */
+#mrb-bar.mrb-light {
+  border-bottom-color: #ddd;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+#mrb-bar.mrb-light .mrb-item {
+  color: #444;
+}
+#mrb-bar.mrb-light .mrb-item:hover {
+  background: rgba(0,0,0,0.06);
+  color: #111;
+}
+#mrb-bar.mrb-light .mrb-dropdown {
+  background: #f7f8fa;
+  border-color: #ddd;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+#mrb-bar.mrb-light .mrb-favicon-placeholder {
+  background: #ccc;
+  color: #666;
+}
+#mrb-bar.mrb-light .mrb-row-break {
+  background: rgba(0,0,0,0.06);
+}
+#mrb-bar.mrb-light .mrb-separator {
+  background: #ddd;
+}
+
 /* Each bookmark item */
 .mrb-item {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 4px;
-  color: #cfd1d6;
+  color: var(--mrb-text, #cfd1d6);
   text-decoration: none;
   white-space: nowrap;
-  max-width: 180px;
+  max-width: 188px;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
-  height: 24px;
+  height: 26px;
   box-sizing: border-box;
   position: relative;
   flex-shrink: 0;
@@ -57,23 +85,24 @@
 
 /* Favicon */
 .mrb-favicon {
-  width: 14px;
-  height: 14px;
+  width: var(--mrb-icon-size, 20px);
+  height: var(--mrb-icon-size, 20px);
   flex-shrink: 0;
-  border-radius: 2px;
+  border-radius: 0;
   object-fit: contain;
+  background: transparent;
 }
 
 .mrb-favicon-placeholder {
-  width: 14px;
-  height: 14px;
+  width: var(--mrb-icon-size, 20px);
+  height: var(--mrb-icon-size, 20px);
   flex-shrink: 0;
   border-radius: 2px;
   background: #555;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 10px;
   color: #aaa;
   font-weight: 600;
 }
@@ -83,8 +112,29 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--mrb-text-size, 13px);
   letter-spacing: 0.01em;
+}
+
+/* Folder icon — hollow outline */
+.mrb-folder-icon {
+  display: inline-block;
+  width: var(--mrb-icon-size, 20px) !important;
+  height: var(--mrb-icon-size, 20px) !important;
+  background: none !important;
+  position: relative;
+}
+.mrb-folder-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+#mrb-bar.mrb-light .mrb-folder-icon::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/%3E%3C/svg%3E");
 }
 
 /* Folder styling */
@@ -223,20 +273,21 @@ html.mrb-active body {
   border-radius: 3px;
 }
 
-/* Light mode variant — auto-detect */
+/* Light mode — auto-detect from browser/OS theme */
 @media (prefers-color-scheme: light) {
-  #mrb-bar {
-    --mrb-bg: #f1f3f5;
-    --mrb-border: #ddd;
-    background: var(--mrb-bg);
+  #mrb-bar:not([style*="background"]) {
+    background: #f1f3f5;
+    border-bottom-color: #ddd;
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   }
-  .mrb-item {
+  #mrb-bar:not([style*="--mrb-text"]) .mrb-item {
     color: #444;
+  }
+  #mrb-bar:not([style*="--mrb-text"]) .mrb-item:hover {
+    color: #111;
   }
   .mrb-item:hover {
     background: rgba(0,0,0,0.06);
-    color: #111;
   }
   .mrb-dropdown {
     background: #f7f8fa;

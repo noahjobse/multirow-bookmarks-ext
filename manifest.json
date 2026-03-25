@@ -3,7 +3,7 @@
   "name": "Multi-Row Bookmarks Bar",
   "version": "1.4.0",
   "description": "Replaces the native bookmarks bar with a clean multi-row version.",
-  "permissions": ["bookmarks", "tabs", "activeTab", "scripting", "storage"],
+  "permissions": ["bookmarks", "tabs", "activeTab", "scripting", "storage", "favicon"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"

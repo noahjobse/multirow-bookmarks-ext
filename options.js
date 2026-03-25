@@ -1,8 +1,10 @@
-const bgColor = document.getElementById("bgColor");
-const bgHex = document.getElementById("bgHex");
-const rowsInput = document.getElementById("rows");
+const textSizeSlider = document.getElementById("textSize");
+const textSizeVal = document.getElementById("textSizeVal");
+const iconSizeSlider = document.getElementById("iconSize");
+const iconSizeVal = document.getElementById("iconSizeVal");
+const boldText = document.getElementById("boldText");
 const savedMsg = document.getElementById("savedMsg");
-const presets = document.querySelectorAll(".preset");
+const alignBtns = document.querySelectorAll("#alignment .btn");
 
 function showSaved() {
   savedMsg.classList.add("show");
@@ -12,54 +14,42 @@ function showSaved() {
 function save(settings) {
   chrome.storage.sync.set(settings, () => {
     showSaved();
-    // Notify all tabs to re-render with new settings
     chrome.runtime.sendMessage({ type: "settingsChanged" });
   });
 }
 
-function updatePresetActive(color) {
-  presets.forEach((p) => {
-    p.classList.toggle("active", p.dataset.color === color);
-  });
-}
-
-// Load saved settings
-chrome.storage.sync.get({ bgColor: "#3b3b3f", rows: 2 }, (settings) => {
-  bgColor.value = settings.bgColor;
-  bgHex.value = settings.bgColor;
-  rowsInput.value = settings.rows;
-  updatePresetActive(settings.bgColor);
+const defaults = { alignment: "center", textSize: 13, iconSize: 20, boldText: false };
+chrome.storage.sync.get(defaults, (settings) => {
+  textSizeSlider.value = settings.textSize;
+  textSizeVal.textContent = settings.textSize + "px";
+  iconSizeSlider.value = settings.iconSize;
+  iconSizeVal.textContent = settings.iconSize + "px";
+  alignBtns.forEach((b) => b.classList.toggle("active", b.dataset.value === settings.alignment));
+  boldText.checked = settings.boldText;
 });
 
-bgColor.addEventListener("input", () => {
-  bgHex.value = bgColor.value;
-  updatePresetActive(bgColor.value);
-  save({ bgColor: bgColor.value });
-});
-
-bgHex.addEventListener("change", () => {
-  let val = bgHex.value.trim();
-  if (!val.startsWith("#")) val = "#" + val;
-  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-    bgColor.value = val;
-    bgHex.value = val;
-    updatePresetActive(val);
-    save({ bgColor: val });
-  }
-});
-
-presets.forEach((p) => {
-  p.addEventListener("click", () => {
-    const color = p.dataset.color;
-    bgColor.value = color;
-    bgHex.value = color;
-    updatePresetActive(color);
-    save({ bgColor: color });
+// Alignment
+alignBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    alignBtns.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    save({ alignment: btn.dataset.value });
   });
 });
 
-rowsInput.addEventListener("change", () => {
-  const val = Math.max(1, Math.min(5, parseInt(rowsInput.value) || 2));
-  rowsInput.value = val;
-  save({ rows: val });
+// Text size
+textSizeSlider.addEventListener("input", () => {
+  textSizeVal.textContent = textSizeSlider.value + "px";
+  save({ textSize: parseInt(textSizeSlider.value) });
+});
+
+// Icon size
+iconSizeSlider.addEventListener("input", () => {
+  iconSizeVal.textContent = iconSizeSlider.value + "px";
+  save({ iconSize: parseInt(iconSizeSlider.value) });
+});
+
+// Bold text
+boldText.addEventListener("change", () => {
+  save({ boldText: boldText.checked });
 });

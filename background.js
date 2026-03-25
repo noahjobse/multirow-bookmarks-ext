@@ -9,6 +9,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === "settingsChanged") {
+    notifyTabs();
+    return;
+  }
+
   if (msg.type === "moveBookmark") {
     // Get the target's current position, then move source to that index
     chrome.bookmarks.get(msg.targetId).then(([target]) => {
