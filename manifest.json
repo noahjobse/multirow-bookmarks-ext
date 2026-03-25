@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Multi-Row Bookmarks Bar",
+  "version": "1.4.0",
+  "description": "Replaces the native bookmarks bar with a clean multi-row version.",
+  "permissions": ["bookmarks", "tabs", "activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "css": ["bookmarks-bar.css"],
+      "js": ["bookmarks-bar.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

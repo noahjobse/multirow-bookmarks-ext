@@ -1,0 +1,259 @@
+/* Multi-Row Bookmarks Bar */
+#mrb-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2147483647;
+  background: var(--mrb-bg, #3b3b3f);
+  border-bottom: 1px solid var(--mrb-border, #3a3d47);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 12px;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: center;
+  padding: 4px 8px 2px;
+  gap: 2px 0;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+#mrb-bar.mrb-collapsed {
+  transform: translateY(-100%);
+}
+
+/* Each bookmark item */
+.mrb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: #cfd1d6;
+  text-decoration: none;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  height: 24px;
+  box-sizing: border-box;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.mrb-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.mrb-item:active {
+  background: rgba(255,255,255,0.12);
+}
+
+/* Favicon */
+.mrb-favicon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  object-fit: contain;
+}
+
+.mrb-favicon-placeholder {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  background: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #aaa;
+  font-weight: 600;
+}
+
+/* Bookmark label */
+.mrb-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+/* Folder styling */
+.mrb-folder {
+  position: relative;
+}
+
+.mrb-folder > .mrb-item::after {
+  content: "▾";
+  font-size: 9px;
+  margin-left: 2px;
+  opacity: 0.5;
+}
+
+/* Folder dropdown */
+.mrb-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: #2e3140;
+  border: 1px solid #3f4250;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  padding: 4px 0;
+  z-index: 2147483647;
+  margin-top: 2px;
+}
+
+.mrb-folder:hover > .mrb-dropdown,
+.mrb-dropdown.mrb-open {
+  display: block;
+}
+
+.mrb-dropdown .mrb-item {
+  display: flex;
+  width: 100%;
+  max-width: none;
+  border-radius: 0;
+  padding: 6px 12px;
+  height: auto;
+}
+
+.mrb-dropdown .mrb-item:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+/* Nested folder dropdown */
+.mrb-dropdown .mrb-folder > .mrb-dropdown {
+  top: 0;
+  left: 100%;
+  margin-top: 0;
+  margin-left: 2px;
+}
+
+/* Separator in dropdown */
+.mrb-separator {
+  height: 1px;
+  background: #3f4250;
+  margin: 4px 8px;
+}
+
+/* Row divider — visual hint between rows */
+#mrb-bar .mrb-row-break {
+  flex-basis: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.04);
+  margin: 2px 0;
+}
+
+/* Drag and drop */
+.mrb-drag-wrapper {
+  display: inline-flex;
+  flex-shrink: 0;
+  position: relative;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease, gap 0.2s ease;
+}
+
+.mrb-drag-wrapper.mrb-dragging {
+  opacity: 0.3;
+  transform: scale(0.95);
+  pointer-events: none;
+}
+
+.mrb-drag-wrapper.mrb-drag-over::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  background: #6c8cff;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(108, 140, 255, 0.5);
+  animation: mrb-indicator-pulse 0.8s ease-in-out infinite alternate;
+}
+
+.mrb-drag-wrapper.mrb-drag-over-right::before {
+  left: auto;
+  right: -2px;
+}
+
+@keyframes mrb-indicator-pulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+/* Neighbors shift apart to show drop gap */
+.mrb-drag-wrapper.mrb-drag-over {
+  margin-left: 8px;
+  transition: margin 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
+}
+
+/* Push page content down */
+html.mrb-active {
+  margin-top: var(--mrb-height, 56px) !important;
+}
+
+html.mrb-active body {
+  /* fallback for fixed-top navbars */
+}
+
+/* Scrollbar in dropdowns */
+.mrb-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.mrb-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mrb-dropdown::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+
+/* Light mode variant — auto-detect */
+@media (prefers-color-scheme: light) {
+  #mrb-bar {
+    --mrb-bg: #f1f3f5;
+    --mrb-border: #ddd;
+    background: var(--mrb-bg);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .mrb-item {
+    color: #444;
+  }
+  .mrb-item:hover {
+    background: rgba(0,0,0,0.06);
+    color: #111;
+  }
+  .mrb-dropdown {
+    background: #f7f8fa;
+    border-color: #ddd;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  }
+  .mrb-dropdown .mrb-item:hover {
+    background: rgba(0,0,0,0.05);
+  }
+  .mrb-separator {
+    background: #ddd;
+  }
+  .mrb-favicon-placeholder {
+    background: #ccc;
+    color: #666;
+  }
+  #mrb-bar .mrb-row-break {
+    background: rgba(0,0,0,0.06);
+  }
+}
