@@ -4,169 +4,317 @@
   <meta charset="utf-8">
   <title>Multi-Row Bookmarks Settings</title>
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      background: #1e1e22;
-      color: #ccc;
-      margin: 0;
-      padding: 40px;
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #202124;
+      color: #e8eaed;
       min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 48px 24px;
     }
-    h1 {
-      font-size: 20px;
-      font-weight: 500;
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
       margin-bottom: 32px;
-      color: #fff;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #3c4043;
     }
-    .setting {
-      margin-bottom: 24px;
+    .header-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #3b3b3f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    label {
-      display: block;
+    .header-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+    .header h1 {
+      font-size: 18px;
+      font-weight: 400;
+      color: #e8eaed;
+    }
+    .header .version {
+      font-size: 12px;
+      color: #9aa0a6;
+      margin-top: 2px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: #3c4043;
+      color: #e8eaed;
+      padding: 10px 24px;
+      border-radius: 8px;
       font-size: 13px;
-      color: #999;
-      margin-bottom: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s;
+      opacity: 0;
+      z-index: 100;
     }
-    .color-row {
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Section card */
+    .card {
+      background: #292a2d;
+      border-radius: 12px;
+      border: 1px solid #3c4043;
+      padding: 0;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #9aa0a6;
+      padding: 16px 20px 8px;
+    }
+
+    /* Setting row */
+    .setting {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-top: 1px solid #3c4043;
+      min-height: 48px;
+    }
+    .setting:first-child,
+    .card-title + .setting {
+      border-top: none;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      color: #e8eaed;
+    }
+    .setting-desc {
+      font-size: 11px;
+      color: #9aa0a6;
+      margin-top: 2px;
+    }
+
+    .setting-value {
+      font-size: 12px;
+      color: #8ab4f8;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: #5f6368;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #dadce0;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+    }
+    .toggle input:checked + .toggle-track {
+      background: #8ab4f8;
+    }
+    .toggle input:checked + .toggle-track::after {
+      transform: translateX(16px);
+      background: #202124;
+    }
+
+    /* Button group (segmented control) */
+    .btn-group {
+      display: flex;
+      background: #3c4043;
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+    .btn {
+      background: transparent;
+      color: #9aa0a6;
+      border: none;
+      padding: 6px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.15s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      color: #e8eaed;
+      background: rgba(255,255,255,0.05);
+    }
+    .btn.active {
+      background: #8ab4f8;
+      color: #202124;
+      font-weight: 500;
+    }
+
+    /* Slider */
+    .slider-row {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    input[type="color"] {
-      width: 40px;
-      height: 32px;
-      border: 1px solid #555;
-      border-radius: 4px;
-      background: none;
-      cursor: pointer;
-      padding: 0;
-    }
-    input[type="text"] {
-      background: #2a2a2e;
-      border: 1px solid #555;
-      border-radius: 4px;
-      color: #fff;
-      padding: 6px 10px;
-      font-size: 13px;
-      font-family: monospace;
-      width: 100px;
-    }
-    input[type="number"] {
-      background: #2a2a2e;
-      border: 1px solid #555;
-      border-radius: 4px;
-      color: #fff;
-      padding: 6px 10px;
-      font-size: 13px;
-      width: 60px;
-    }
-    .preset-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .preset {
-      width: 28px;
-      height: 28px;
-      border-radius: 4px;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: border-color 0.15s;
-    }
-    .preset:hover, .preset.active {
-      border-color: #6c8cff;
-    }
-    .saved {
-      color: #6c8cff;
-      font-size: 12px;
-      opacity: 0;
-      transition: opacity 0.3s;
-      margin-left: 8px;
-    }
-    .saved.show {
-      opacity: 1;
-    }
-    .btn-group {
-      display: flex;
-      gap: 0;
-      border-radius: 6px;
-      overflow: hidden;
-      border: 1px solid #555;
-      width: fit-content;
-    }
-    .btn {
-      background: #2a2a2e;
-      color: #ccc;
-      border: none;
-      padding: 7px 16px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-      border-right: 1px solid #555;
-      font-family: inherit;
-    }
-    .btn:last-child {
-      border-right: none;
-    }
-    .btn:hover {
-      background: #3a3a3e;
-    }
-    .btn.active {
-      background: #6c8cff;
-      color: #fff;
-    }
     .slider {
       -webkit-appearance: none;
-      width: 240px;
+      flex: 1;
       height: 4px;
-      background: #3a3a3e;
+      background: #5f6368;
       border-radius: 2px;
       outline: none;
-    }
-    input[type="checkbox"] {
-      margin-right: 8px;
-      accent-color: #6c8cff;
+      max-width: 180px;
     }
     .slider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      background: #6c8cff;
+      background: #8ab4f8;
       cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      transition: transform 0.1s;
+    }
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 11px;
+      color: #5f6368;
     }
   </style>
 </head>
 <body>
-  <h1>Multi-Row Bookmarks Settings</h1>
+  <div class="container">
+    <div class="header">
+      <div class="header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8ab4f8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Multi-Row Bookmarks</h1>
+        <div class="version">v1.4.0</div>
+      </div>
+    </div>
 
-  <span class="saved" id="savedMsg">Saved</span>
+    <div class="toast" id="savedMsg">Settings saved</div>
 
-  <div class="setting">
-    <label>Alignment</label>
-    <div class="btn-group" id="alignment">
-      <button class="btn" data-value="flex-start">Left</button>
-      <button class="btn" data-value="center">Center</button>
-      <button class="btn" data-value="flex-end">Right</button>
-      <button class="btn" data-value="space-evenly">Spread</button>
+    <!-- Layout -->
+    <div class="card">
+      <div class="card-title">Layout</div>
+
+      <div class="setting">
+        <div>
+          <div class="setting-label">Alignment</div>
+        </div>
+        <div class="btn-group" id="alignment">
+          <button class="btn" data-value="flex-start">Left</button>
+          <button class="btn" data-value="center">Center</button>
+          <button class="btn" data-value="flex-end">Right</button>
+          <button class="btn" data-value="space-evenly">Spread</button>
+        </div>
+      </div>
+
+      <div class="setting">
+        <div>
+          <div class="setting-label">Folders on separate row</div>
+          <div class="setting-desc">Group folders below bookmarks</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="foldersOnSeparateLine">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Appearance -->
+    <div class="card">
+      <div class="card-title">Appearance</div>
+
+      <div class="setting">
+        <div class="setting-label">Text size</div>
+        <div class="slider-row">
+          <input type="range" id="textSize" min="8" max="24" value="13" class="slider">
+          <span class="setting-value" id="textSizeVal">13px</span>
+        </div>
+      </div>
+
+      <div class="setting">
+        <div class="setting-label">Icon size</div>
+        <div class="slider-row">
+          <input type="range" id="iconSize" min="10" max="36" value="20" class="slider">
+          <span class="setting-value" id="iconSizeVal">20px</span>
+        </div>
+      </div>
+
+      <div class="setting">
+        <div>
+          <div class="setting-label">Bold text</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="boldText">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="footer">
+      Colors follow your system theme automatically.<br>
+      Reload open tabs to see changes.
     </div>
   </div>
-
-  <div class="setting">
-    <label>Text Size <span id="textSizeVal" style="color:#6c8cff">13px</span></label>
-    <input type="range" id="textSize" min="8" max="24" value="13" class="slider">
-  </div>
-
-  <div class="setting">
-    <label>Icon Size <span id="iconSizeVal" style="color:#6c8cff">20px</span></label>
-    <input type="range" id="iconSize" min="10" max="36" value="20" class="slider">
-  </div>
-
-  <div class="setting">
-    <label><input type="checkbox" id="boldText"> Bold text</label>
-  </div>
-
-  <p style="font-size:11px;color:#666;margin-top:32px;">Reload open pages to see changes take effect.</p>
 
   <script src="options.js"></script>
 </body>

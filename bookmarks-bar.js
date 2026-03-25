@@ -30,41 +30,49 @@
     if (settings.boldText !== undefined) {
       bar.style.fontWeight = settings.boldText ? "600" : "normal";
     }
+    if (settings.foldersOnSeparateLine !== undefined) {
+      bar.dataset.foldersRow = settings.foldersOnSeparateLine ? "true" : "false";
+    }
   }
 
   // Auto dark/light based on OS/browser theme
   function applyTheme() {
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     bar.classList.toggle("mrb-light", !isDark);
-    bar.style.background = isDark ? "#3b3b3f" : "#f1f3f5";
-    bar.style.setProperty("--mrb-text", isDark ? "#cfd1d6" : "#444");
+    const bg = isDark ? "#3b3b3f" : "#f1f3f5";
+    bar.style.background = bg;
+    bar.style.setProperty("--mrb-bg", bg);
+    bar.style.setProperty("--mrb-text", isDark ? "#ffffff" : "#000000");
   }
   applyTheme();
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 
-  // Load settings
-  chrome.storage.sync.get({ alignment: "center", textSize: 13, iconSize: 20, boldText: false }, (settings) => {
+  // Load settings first, then bookmarks
+  chrome.storage.sync.get({ alignment: "center", textSize: 13, iconSize: 20, boldText: false, foldersOnSeparateLine: false }, (settings) => {
     applySettings(settings);
+    loadBookmarks();
   });
 
   // Listen for settings changes
   chrome.storage.onChanged.addListener((changes) => {
     const updated = {};
-    if (changes.bgColor) updated.bgColor = changes.bgColor.newValue;
-    if (changes.rows) updated.rows = changes.rows.newValue;
+    for (const key of Object.keys(changes)) {
+      updated[key] = changes[key].newValue;
+    }
     if (Object.keys(updated).length) {
       applySettings(updated);
-      loadBookmarks(); // re-render with new row count
+      loadBookmarks();
     }
   });
 
   // No toggle — bar is always visible
 
+  const extId = chrome.runtime.id;
+
   function faviconUrl(url) {
     try {
-      const u = new URL(url);
-      if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return null;
-      return `https://icons.duckduckgo.com/ip3/${u.hostname}.ico`;
+      new URL(url); // validate
+      return `chrome-extension://${extId}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=64`;
     } catch {
       return null;
     }
@@ -211,6 +219,27 @@
         }
       });
 
+      // Position nested dropdowns with fixed positioning
+      folder.addEventListener("mouseenter", () => {
+        const parentDropdown = folder.closest(".mrb-dropdown");
+        if (parentDropdown) {
+          const rect = folder.getBoundingClientRect();
+          dropdown.style.position = "fixed";
+          dropdown.style.left = rect.right + 2 + "px";
+          dropdown.style.top = rect.top + "px";
+          // Keep on screen
+          requestAnimationFrame(() => {
+            const dr = dropdown.getBoundingClientRect();
+            if (dr.right > window.innerWidth) {
+              dropdown.style.left = rect.left - dr.width - 2 + "px";
+            }
+            if (dr.bottom > window.innerHeight) {
+              dropdown.style.top = Math.max(0, window.innerHeight - dr.height) + "px";
+            }
+          });
+        }
+      });
+
       folder.appendChild(dropdown);
       return getDraggableWrapper(folder, node.id);
     }
@@ -230,10 +259,32 @@
 
     const items = bookmarksBar.children;
 
-    items.forEach((node) => {
-      const el = createBookmarkEl(node);
-      if (el) bar.appendChild(el);
-    });
+    if (bar.dataset.foldersRow === "true") {
+      // Bookmarks first, then a row break, then folders
+      const links = items.filter((n) => n.url);
+      const folders = items.filter((n) => n.children);
+
+      links.forEach((node) => {
+        const el = createBookmarkEl(node);
+        if (el) bar.appendChild(el);
+      });
+
+      if (folders.length) {
+        const br = document.createElement("div");
+        br.className = "mrb-row-break";
+        bar.appendChild(br);
+
+        folders.forEach((node) => {
+          const el = createBookmarkEl(node);
+          if (el) bar.appendChild(el);
+        });
+      }
+    } else {
+      items.forEach((node) => {
+        const el = createBookmarkEl(node);
+        if (el) bar.appendChild(el);
+      });
+    }
 
     document.documentElement.appendChild(bar);
 
@@ -259,8 +310,6 @@
       loadBookmarks();
     }
   });
-
-  loadBookmarks();
 
   document.addEventListener("click", (e) => {
     if (!e.target.closest("#mrb-bar")) {

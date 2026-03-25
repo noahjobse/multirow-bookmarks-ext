@@ -122,27 +122,28 @@
     if (settings.boldText !== undefined) {
       bar.style.fontWeight = settings.boldText ? "600" : "normal";
     }
+    if (settings.foldersOnSeparateLine !== undefined) {
+      bar.dataset.foldersRow = settings.foldersOnSeparateLine ? "true" : "false";
+    }
   }
 
   function applyTheme() {
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     bar.classList.toggle("mrb-light", !isDark);
-    bar.style.background = isDark ? "#3b3b3f" : "#f1f3f5";
-    bar.style.setProperty("--mrb-text", isDark ? "#cfd1d6" : "#444");
+    const bg = isDark ? "#3b3b3f" : "#f1f3f5";
+    bar.style.background = bg;
+    bar.style.setProperty("--mrb-bg", bg);
+    bar.style.setProperty("--mrb-text", isDark ? "#ffffff" : "#000000");
   }
   applyTheme();
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 
-  chrome.storage.sync.get({ alignment: "center", textSize: 13, iconSize: 20, boldText: false }, (settings) => {
-    applySettings(settings);
-  });
-
+  // Settings loaded before bookmarks render — see Init section below
   chrome.storage.onChanged.addListener((changes) => {
     const updated = {};
-    if (changes.bgColor) updated.bgColor = changes.bgColor.newValue;
-    if (changes.textColor) updated.textColor = changes.textColor.newValue;
-    if (changes.alignment) updated.alignment = changes.alignment.newValue;
-    if (changes.itemSize) updated.itemSize = changes.itemSize.newValue;
+    for (const key of Object.keys(changes)) {
+      updated[key] = changes[key].newValue;
+    }
     if (Object.keys(updated).length) {
       applySettings(updated);
       chrome.bookmarks.getTree().then(renderBar).catch(() => {});
@@ -292,6 +293,25 @@
         }
       });
 
+      folder.addEventListener("mouseenter", () => {
+        const parentDropdown = folder.closest(".mrb-dropdown");
+        if (parentDropdown) {
+          const rect = folder.getBoundingClientRect();
+          dropdown.style.position = "fixed";
+          dropdown.style.left = rect.right + 2 + "px";
+          dropdown.style.top = rect.top + "px";
+          requestAnimationFrame(() => {
+            const dr = dropdown.getBoundingClientRect();
+            if (dr.right > window.innerWidth) {
+              dropdown.style.left = rect.left - dr.width - 2 + "px";
+            }
+            if (dr.bottom > window.innerHeight) {
+              dropdown.style.top = Math.max(0, window.innerHeight - dr.height) + "px";
+            }
+          });
+        }
+      });
+
       folder.appendChild(dropdown);
       return getDraggableWrapper(folder, node.id);
     }
@@ -309,10 +329,33 @@
 
     if (!bookmarksBar || !bookmarksBar.children) return;
 
-    bookmarksBar.children.forEach((node) => {
-      const el = createBookmarkEl(node);
-      if (el) bar.appendChild(el);
-    });
+    const items = bookmarksBar.children;
+
+    if (bar.dataset.foldersRow === "true") {
+      const links = items.filter((n) => n.url);
+      const folders = items.filter((n) => n.children);
+
+      links.forEach((node) => {
+        const el = createBookmarkEl(node);
+        if (el) bar.appendChild(el);
+      });
+
+      if (folders.length) {
+        const br = document.createElement("div");
+        br.className = "mrb-row-break";
+        bar.appendChild(br);
+
+        folders.forEach((node) => {
+          const el = createBookmarkEl(node);
+          if (el) bar.appendChild(el);
+        });
+      }
+    } else {
+      items.forEach((node) => {
+        const el = createBookmarkEl(node);
+        if (el) bar.appendChild(el);
+      });
+    }
 
     document.body.insertBefore(bar, document.body.firstChild);
 
@@ -323,12 +366,15 @@
     });
   }
 
-  // ─── Init ──────────────────────────────────────────
-  chrome.bookmarks.getTree().then((tree) => {
-    renderBar(tree);
-    renderQuickLinks(tree);
-  }).catch((err) => {
-    console.error("[MRB-newtab]", err);
+  // ─── Init — load settings first, then render ───────
+  chrome.storage.sync.get({ alignment: "center", textSize: 13, iconSize: 20, boldText: false, foldersOnSeparateLine: false }, (settings) => {
+    applySettings(settings);
+    chrome.bookmarks.getTree().then((tree) => {
+      renderBar(tree);
+      renderQuickLinks(tree);
+    }).catch((err) => {
+      console.error("[MRB-newtab]", err);
+    });
   });
 
   const reload = () => chrome.bookmarks.getTree().then((tree) => {

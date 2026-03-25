@@ -8,7 +8,7 @@ const alignBtns = document.querySelectorAll("#alignment .btn");
 
 function showSaved() {
   savedMsg.classList.add("show");
-  setTimeout(() => savedMsg.classList.remove("show"), 1500);
+  setTimeout(() => savedMsg.classList.remove("show"), 2000);
 }
 
 function save(settings) {
@@ -18,7 +18,9 @@ function save(settings) {
   });
 }
 
-const defaults = { alignment: "center", textSize: 13, iconSize: 20, boldText: false };
+const foldersOnSeparateLine = document.getElementById("foldersOnSeparateLine");
+
+const defaults = { alignment: "center", textSize: 13, iconSize: 20, boldText: false, foldersOnSeparateLine: false };
 chrome.storage.sync.get(defaults, (settings) => {
   textSizeSlider.value = settings.textSize;
   textSizeVal.textContent = settings.textSize + "px";
@@ -26,6 +28,7 @@ chrome.storage.sync.get(defaults, (settings) => {
   iconSizeVal.textContent = settings.iconSize + "px";
   alignBtns.forEach((b) => b.classList.toggle("active", b.dataset.value === settings.alignment));
   boldText.checked = settings.boldText;
+  foldersOnSeparateLine.checked = settings.foldersOnSeparateLine;
 });
 
 // Alignment
@@ -52,4 +55,9 @@ iconSizeSlider.addEventListener("input", () => {
 // Bold text
 boldText.addEventListener("change", () => {
   save({ boldText: boldText.checked });
+});
+
+// Folders on separate line
+foldersOnSeparateLine.addEventListener("change", () => {
+  save({ foldersOnSeparateLine: foldersOnSeparateLine.checked });
 });
