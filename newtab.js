@@ -193,6 +193,33 @@
   applyTheme();
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 
+  function applyPushDown(h) {
+    document.documentElement.style.setProperty("--mrb-height", `${h}px`);
+    document.documentElement.classList.add("mrb-active");
+  }
+
+  // Counter page zoom so bar stays the same physical size
+  const baselineDPR = window.devicePixelRatio;
+
+  function applyZoomCompensation() {
+    const zoom = window.devicePixelRatio / baselineDPR;
+    bar.style.zoom = (zoom > 0 && isFinite(zoom)) ? (1 / zoom) : 1;
+    requestAnimationFrame(() => {
+      const h = bar.getBoundingClientRect().height;
+      if (h > 0) applyPushDown(h);
+    });
+  }
+
+  function watchZoom() {
+    const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    mq.addEventListener("change", () => {
+      applyZoomCompensation();
+      watchZoom();
+    }, { once: true });
+  }
+  watchZoom();
+  applyZoomCompensation();
+
   // Settings loaded before bookmarks render — see Init section below
   chrome.storage.onChanged.addListener((changes) => {
     const updated = {};
@@ -388,12 +415,11 @@
       });
     }
 
-    document.body.insertBefore(bar, document.body.firstChild);
+    document.documentElement.appendChild(bar);
 
     requestAnimationFrame(() => {
-      const h = bar.offsetHeight;
-      document.documentElement.style.setProperty("--mrb-height", `${h}px`);
-      document.documentElement.classList.add("mrb-active");
+      const h = bar.getBoundingClientRect().height;
+      applyPushDown(h);
     });
   }
 

@@ -322,10 +322,12 @@
 
 html.mrb-active {
   margin-top: var(--mrb-height, 56px) !important;
+  height: calc(100% - var(--mrb-height, 56px)) !important;
 }
-
-html.mrb-active body {
-  /* fallback for fixed-top navbars */
+html.mrb-active > body {
+  /* transform creates a containing block for fixed-position children,
+     so they shift down with the page instead of sitting at viewport top */
+  transform: translateY(0) !important;
 }
 
 /* Scrollbar in dropdowns */
