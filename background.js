@@ -15,14 +15,38 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "moveBookmark") {
-    // Get the target's current position, then move source to that index
-    chrome.bookmarks.get(msg.targetId).then(([target]) => {
+    chrome.bookmarks.get(String(msg.targetId)).then(([target]) => {
       const idx = msg.after ? target.index + 1 : target.index;
-      chrome.bookmarks.move(msg.sourceId, {
-        parentId: target.parentId,
-        index: idx
+      chrome.bookmarks.move(String(msg.sourceId), {
+        parentId: String(target.parentId),
+        index: Number(idx)
       });
     });
+  }
+
+  if (msg.type === "deleteBookmark") {
+    chrome.bookmarks.getChildren(msg.id).then((children) => {
+      // Has children — use removeTree
+      chrome.bookmarks.removeTree(msg.id);
+    }).catch(() => {
+      // No children or is a bookmark — use remove
+      chrome.bookmarks.remove(msg.id);
+    });
+  }
+
+  if (msg.type === "editBookmark") {
+    const changes = {};
+    if (msg.title !== undefined) changes.title = msg.title;
+    if (msg.url !== undefined) changes.url = msg.url;
+    chrome.bookmarks.update(msg.id, changes);
+  }
+
+  if (msg.type === "addBookmark") {
+    chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title, url: msg.url });
+  }
+
+  if (msg.type === "addFolder") {
+    chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title });
   }
 });
 

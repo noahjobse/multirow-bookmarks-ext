@@ -17,6 +17,61 @@
   const bar = document.createElement("div");
   bar.id = "mrb-bar";
 
+  // Always snap the drop indicator to the nearest item
+  bar.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (!dragSrcId) return;
+
+    // Clear all indicators
+    bar.querySelectorAll(".mrb-drag-over, .mrb-drag-over-right").forEach((el) => {
+      el.classList.remove("mrb-drag-over", "mrb-drag-over-right");
+    });
+
+    // Find the nearest wrapper
+    const wrappers = [...bar.querySelectorAll(".mrb-drag-wrapper")];
+    let closest = null;
+    let closestDist = Infinity;
+    let closestRight = false;
+
+    for (const w of wrappers) {
+      if (w.dataset.bookmarkId === dragSrcId) continue;
+      const rect = w.getBoundingClientRect();
+      // Only consider items on the same row (cursor Y within item's vertical bounds)
+      if (e.clientY < rect.top || e.clientY > rect.bottom) continue;
+      const midX = rect.left + rect.width / 2;
+      const dist = Math.abs(e.clientX - midX);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = w;
+        closestRight = e.clientX > midX;
+      }
+    }
+
+    if (closest) {
+      closest.classList.toggle("mrb-drag-over", !closestRight);
+      closest.classList.toggle("mrb-drag-over-right", closestRight);
+    }
+  });
+
+  bar.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const target = bar.querySelector(".mrb-drag-over, .mrb-drag-over-right");
+    if (!target) return;
+    const isRight = target.classList.contains("mrb-drag-over-right");
+    const targetId = target.dataset.bookmarkId;
+    target.classList.remove("mrb-drag-over", "mrb-drag-over-right");
+    const srcId = dragSrcId;
+    if (srcId && srcId !== targetId) {
+      chrome.runtime.sendMessage({
+        type: "moveBookmark",
+        sourceId: srcId,
+        targetId: targetId,
+        after: isRight
+      });
+    }
+  });
+
   function applySettings(settings) {
     if (settings.alignment) {
       bar.style.justifyContent = settings.alignment;
@@ -47,23 +102,7 @@
   applyTheme();
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 
-  // Counter page zoom so bar stays the same physical size
-  const baselineDPR = window.devicePixelRatio;
-
-  function applyZoomCompensation() {
-    const zoom = window.devicePixelRatio / baselineDPR;
-    bar.style.zoom = zoom > 0 && isFinite(zoom) ? (1 / zoom) : 1;
-  }
-
-  function watchZoom() {
-    const mq = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
-    mq.addEventListener("change", () => {
-      applyZoomCompensation();
-      watchZoom();
-    }, { once: true });
-  }
-  watchZoom();
-  applyZoomCompensation();
+  // Note: zoom compensation removed — CSS zoom breaks drag and drop
 
   // Load settings first, then bookmarks
   chrome.storage.sync.get({ alignment: "center", textSize: 13, iconSize: 20, boldText: false, foldersOnSeparateLine: false }, (settings) => {
@@ -120,36 +159,7 @@
       dragSrcId = null;
     });
 
-    wrapper.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (wrapper.dataset.bookmarkId !== dragSrcId) {
-        // Detect which half of the element the cursor is over
-        const rect = wrapper.getBoundingClientRect();
-        const isRight = e.clientX > rect.left + rect.width / 2;
-        wrapper.classList.toggle("mrb-drag-over", !isRight);
-        wrapper.classList.toggle("mrb-drag-over-right", isRight);
-      }
-    });
-
-    wrapper.addEventListener("dragleave", () => {
-      wrapper.classList.remove("mrb-drag-over", "mrb-drag-over-right");
-    });
-
-    wrapper.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const isRight = wrapper.classList.contains("mrb-drag-over-right");
-      wrapper.classList.remove("mrb-drag-over", "mrb-drag-over-right");
-      const targetId = wrapper.dataset.bookmarkId;
-      if (dragSrcId && dragSrcId !== targetId) {
-        chrome.runtime.sendMessage({
-          type: "moveBookmark",
-          sourceId: dragSrcId,
-          targetId: targetId,
-          after: isRight
-        });
-      }
-    });
+    // Drop handled by bar-level listener
 
     return wrapper;
   }
@@ -160,7 +170,8 @@
       a.className = "mrb-item";
       a.href = node.url;
       a.title = node.title || node.url;
-      a.draggable = false; // wrapper handles drag
+      a.draggable = false;
+      a.addEventListener("dragstart", (e) => e.preventDefault());
 
       const fav = faviconUrl(node.url);
       if (fav) {
@@ -169,6 +180,7 @@
         img.src = fav;
         img.alt = "";
         img.loading = "lazy";
+        img.draggable = false;
         img.onerror = () => {
           const ph = document.createElement("span");
           ph.className = "mrb-favicon-placeholder";
@@ -197,6 +209,8 @@
         }
       });
 
+      a.addEventListener("contextmenu", (e) => showContextMenu(e, node));
+
       return getDraggableWrapper(a, node.id);
     }
 
@@ -221,6 +235,7 @@
         trigger.appendChild(label);
       }
 
+      trigger.addEventListener("contextmenu", (e) => showContextMenu(e, node));
       folder.appendChild(trigger);
 
       const dropdown = document.createElement("div");
@@ -335,5 +350,106 @@
         d.classList.remove("mrb-open")
       );
     }
+    // Close context menu on any click
+    const menu = document.getElementById("mrb-context-menu");
+    if (menu) menu.remove();
   });
+
+  // ─── Context menu ─────────────────────────────────
+  function showContextMenu(e, node) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Remove any existing menu
+    const old = document.getElementById("mrb-context-menu");
+    if (old) old.remove();
+
+    const menu = document.createElement("div");
+    menu.id = "mrb-context-menu";
+    menu.className = bar.classList.contains("mrb-light") ? "mrb-ctx mrb-ctx-light" : "mrb-ctx";
+
+    const items = [];
+
+    if (node.url) {
+      items.push({ label: "Open in new tab", action: () => window.open(node.url, "_blank") });
+      items.push({ label: "Open in new window", action: () => window.open(node.url, "_blank", "noopener") });
+      items.push({ type: "separator" });
+      items.push({ label: "Rename...", action: () => renameBookmark(node) });
+      items.push({ label: "Edit URL...", action: () => editBookmarkUrl(node) });
+      items.push({ label: "Delete", action: () => chrome.runtime.sendMessage({ type: "deleteBookmark", id: node.id }) });
+    } else if (node.children) {
+      items.push({ label: "Open all in tabs", action: () => {
+        node.children.filter(c => c.url).forEach(c => window.open(c.url, "_blank"));
+      }});
+      items.push({ type: "separator" });
+      items.push({ label: "Rename...", action: () => editFolder(node) });
+      items.push({ label: "Delete folder", action: () => chrome.runtime.sendMessage({ type: "deleteBookmark", id: node.id }) });
+    }
+
+    items.push({ type: "separator" });
+    items.push({ label: "Add bookmark...", action: () => addBookmark(node) });
+    items.push({ label: "Add folder...", action: () => addFolder(node) });
+    items.push({ type: "separator" });
+    items.push({ label: "Bookmark manager", action: () => window.open("chrome://bookmarks", "_blank") });
+
+    items.forEach((item) => {
+      if (item.type === "separator") {
+        const sep = document.createElement("div");
+        sep.className = "mrb-ctx-sep";
+        menu.appendChild(sep);
+      } else {
+        const btn = document.createElement("div");
+        btn.className = "mrb-ctx-item";
+        btn.textContent = item.label;
+        btn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          menu.remove();
+          item.action();
+        });
+        menu.appendChild(btn);
+      }
+    });
+
+    document.documentElement.appendChild(menu);
+
+    // Position
+    const x = Math.min(e.clientX, window.innerWidth - 200);
+    const y = Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 10);
+    menu.style.left = x + "px";
+    menu.style.top = y + "px";
+  }
+
+  function renameBookmark(node) {
+    const title = prompt("Bookmark name:", node.title || "");
+    if (title === null) return;
+    chrome.runtime.sendMessage({ type: "editBookmark", id: node.id, title });
+  }
+
+  function editBookmarkUrl(node) {
+    const url = prompt("URL:", node.url || "");
+    if (url === null) return;
+    chrome.runtime.sendMessage({ type: "editBookmark", id: node.id, url });
+  }
+
+  function editFolder(node) {
+    const title = prompt("Folder name:", node.title || "");
+    if (title === null) return;
+    chrome.runtime.sendMessage({ type: "editBookmark", id: node.id, title });
+  }
+
+  function addBookmark(node) {
+    const title = prompt("New bookmark name:");
+    if (!title) return;
+    const url = prompt("URL:");
+    if (!url) return;
+    const parentId = node.children ? node.id : node.parentId;
+    chrome.runtime.sendMessage({ type: "addBookmark", parentId, title, url });
+  }
+
+  function addFolder(node) {
+    const title = prompt("New folder name:");
+    if (!title) return;
+    const parentId = node.children ? node.id : node.parentId;
+    chrome.runtime.sendMessage({ type: "addFolder", parentId, title });
+  }
 })();
