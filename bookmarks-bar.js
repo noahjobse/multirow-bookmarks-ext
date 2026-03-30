@@ -160,12 +160,7 @@
   const extId = chrome.runtime.id;
 
   function faviconUrl(url) {
-    try {
-      new URL(url); // validate
-      return `chrome-extension://${extId}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=64`;
-    } catch {
-      return null;
-    }
+    return Utils.faviconUrl(url, extId)?.replace("size=16", "size=64") || null;
   }
 
   function clearChildren(el) {
@@ -238,7 +233,7 @@
       a.addEventListener("auxclick", (e) => {
         if (e.button === 1) {
           e.preventDefault();
-          window.open(node.url, "_blank");
+          window.open(node.url, "_blank", "noopener");
         }
       });
 
@@ -333,10 +328,7 @@
   function render(bookmarks) {
     clearChildren(bar);
 
-    const root = bookmarks[0];
-    const bookmarksBar = root.children?.find(
-      (c) => c.title === "Bookmarks bar" || c.title === "Bookmarks Bar" || c.title === "Bookmarks Toolbar" || c.title === "Bookmarks"
-    );
+    const bookmarksBar = Utils.findBookmarksBarFolder(bookmarks);
 
     if (!bookmarksBar || !bookmarksBar.children) return;
     barRootId = bookmarksBar.id;
@@ -421,7 +413,7 @@
     const items = [];
 
     if (node && node.url) {
-      items.push({ label: "Open in new tab", action: () => window.open(node.url, "_blank") });
+      items.push({ label: "Open in new tab", action: () => window.open(node.url, "_blank", "noopener") });
       items.push({ label: "Open in new window", action: () => window.open(node.url, "_blank", "noopener") });
       items.push({ type: "separator" });
       items.push({ label: "Rename...", action: () => renameBookmark(node) });
@@ -429,7 +421,7 @@
       items.push({ label: "Delete", action: () => chrome.runtime.sendMessage({ type: "deleteBookmark", id: node.id }) });
     } else if (node && node.children) {
       items.push({ label: "Open all in tabs", action: () => {
-        node.children.filter(c => c.url).forEach(c => window.open(c.url, "_blank"));
+        node.children.filter(c => c.url).forEach(c => window.open(c.url, "_blank", "noopener"));
       }});
       items.push({ type: "separator" });
       items.push({ label: "Rename...", action: () => editFolder(node) });
@@ -538,14 +530,45 @@
     overlay.appendChild(dialog);
 
     const close = () => overlay.remove();
+    const clearErrors = () => {
+      dialog.querySelectorAll(".mrb-input-error").forEach((el) => el.classList.remove("mrb-input-error"));
+      dialog.querySelectorAll(".mrb-error-msg").forEach((el) => el.remove());
+    };
+    const showError = (inp, msg) => {
+      inp.classList.add("mrb-input-error");
+      const err = document.createElement("div");
+      err.className = "mrb-error-msg";
+      err.textContent = msg;
+      inp.parentNode.insertBefore(err, inp.nextSibling);
+    };
     const save = () => {
+      clearErrors();
+      let valid = true;
       const values = {};
-      for (const k in inputs) values[k] = inputs[k].value.trim();
-      if (Object.values(values).every(Boolean)) {
-        onSave(values);
-      }
+      fields.forEach(({ key }) => {
+        const val = inputs[key].value.trim();
+        values[key] = val;
+        if (!val) {
+          showError(inputs[key], "This field is required");
+          valid = false;
+        } else if (key === "url" && !Utils.isValidUrl(val)) {
+          showError(inputs[key], "Enter a valid URL (https://...)");
+          valid = false;
+        }
+      });
+      if (!valid) return;
+      onSave(values);
       close();
     };
+
+    // Clear error on input
+    Object.values(inputs).forEach((inp) => {
+      inp.addEventListener("input", () => {
+        inp.classList.remove("mrb-input-error");
+        const err = inp.nextElementSibling;
+        if (err && err.classList.contains("mrb-error-msg")) err.remove();
+      });
+    });
 
     cancelBtn.addEventListener("click", close);
     saveBtn.addEventListener("click", save);

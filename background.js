@@ -2,10 +2,12 @@
 
 // Respond to content script requests
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) return;
+
   if (msg.type === "getBookmarks") {
     chrome.bookmarks.getTree().then((tree) => {
       sendResponse(tree);
-    });
+    }).catch(() => sendResponse([]));
     return true;
   }
 
@@ -17,20 +19,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "moveBookmark") {
     chrome.bookmarks.get(String(msg.targetId)).then(([target]) => {
       const idx = msg.after ? target.index + 1 : target.index;
-      chrome.bookmarks.move(String(msg.sourceId), {
+      return chrome.bookmarks.move(String(msg.sourceId), {
         parentId: String(target.parentId),
         index: Number(idx)
       });
-    });
+    }).catch(() => {});
   }
 
   if (msg.type === "deleteBookmark") {
     chrome.bookmarks.getChildren(msg.id).then((children) => {
-      // Has children — use removeTree
-      chrome.bookmarks.removeTree(msg.id);
+      return chrome.bookmarks.removeTree(msg.id);
     }).catch(() => {
-      // No children or is a bookmark — use remove
-      chrome.bookmarks.remove(msg.id);
+      return chrome.bookmarks.remove(msg.id).catch(() => {});
     });
   }
 
@@ -38,15 +38,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const changes = {};
     if (msg.title !== undefined) changes.title = msg.title;
     if (msg.url !== undefined) changes.url = msg.url;
-    chrome.bookmarks.update(msg.id, changes);
+    chrome.bookmarks.update(msg.id, changes).catch(() => {});
   }
 
   if (msg.type === "addBookmark") {
-    chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title, url: msg.url });
+    chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title, url: msg.url }).catch(() => {});
   }
 
   if (msg.type === "addFolder") {
-    chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title });
+    chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title }).catch(() => {});
   }
 
   if (msg.type === "openBookmarkManager") {

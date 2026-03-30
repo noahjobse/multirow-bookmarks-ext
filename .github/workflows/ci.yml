@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run tests
+        run: node utils.test.js
+
+      - name: Check for syntax errors
+        run: |
+          node --check background.js
+          node --check bookmarks-bar.js
+          node --check newtab.js
+          node --check options.js
+          node --check utils.js
+
+      - name: Package extension
+        run: |
+          zip -r multirow-bookmarks-ext.zip \
+            manifest.json \
+            background.js \
+            bookmarks-bar.js \
+            bookmarks-bar.css \
+            newtab.html \
+            newtab.js \
+            options.html \
+            options.js \
+            utils.js \
+            icon128.png
+
+      - name: Upload extension zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: multirow-bookmarks-ext.zip
