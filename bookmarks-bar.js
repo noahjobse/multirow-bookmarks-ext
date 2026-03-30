@@ -105,6 +105,28 @@
   function applyPushDown(h) {
     document.documentElement.style.setProperty("--mrb-height", `${h}px`);
     document.documentElement.classList.add("mrb-active");
+    injectViewportPatch(h);
+  }
+
+  // Inject a script into the page's main world to override innerHeight
+  // so JS-driven layouts see the compressed viewport size
+  let patchScript = null;
+  function injectViewportPatch(h) {
+    if (patchScript) patchScript.remove();
+    patchScript = document.createElement("script");
+    patchScript.textContent = `(function(){
+      var mrbH = ${h};
+      var orig = Object.getOwnPropertyDescriptor(window, 'innerHeight')
+        || Object.getOwnPropertyDescriptor(Window.prototype, 'innerHeight');
+      if (orig && orig.get) {
+        Object.defineProperty(window, 'innerHeight', {
+          configurable: true,
+          get: function() { return orig.get.call(this) - mrbH; }
+        });
+      }
+      window.dispatchEvent(new Event('resize'));
+    })();`;
+    document.documentElement.appendChild(patchScript);
   }
 
   // Counter page zoom so bar stays the same physical size

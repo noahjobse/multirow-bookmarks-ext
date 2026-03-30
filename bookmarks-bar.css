@@ -321,13 +321,28 @@
 }
 
 html.mrb-active {
-  margin-top: var(--mrb-height, 56px) !important;
-  height: calc(100% - var(--mrb-height, 56px)) !important;
+  position: fixed !important;
+  top: var(--mrb-height, 56px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  overflow: auto !important;
 }
-html.mrb-active > body {
-  /* transform creates a containing block for fixed-position children,
-     so they shift down with the page instead of sitting at viewport top */
-  transform: translateY(0) !important;
+
+/* Override common 100vh patterns so pages fit within the compressed viewport */
+html.mrb-active [style*="height: 100vh"],
+html.mrb-active [style*="height:100vh"],
+html.mrb-active [style*="min-height: 100vh"],
+html.mrb-active [style*="min-height:100vh"] {
+  height: calc(100vh - var(--mrb-height, 0px)) !important;
+  min-height: calc(100vh - var(--mrb-height, 0px)) !important;
+}
+/* Tailwind / common framework classes */
+html.mrb-active .h-screen {
+  height: calc(100vh - var(--mrb-height, 0px)) !important;
+}
+html.mrb-active .min-h-screen {
+  min-height: calc(100vh - var(--mrb-height, 0px)) !important;
 }
 
 /* Scrollbar in dropdowns */
