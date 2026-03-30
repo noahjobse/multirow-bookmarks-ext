@@ -48,6 +48,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "addFolder") {
     chrome.bookmarks.create({ parentId: msg.parentId, title: msg.title });
   }
+
+  if (msg.type === "openBookmarkManager") {
+    chrome.tabs.create({ url: "chrome://bookmarks" });
+  }
 });
 
 // Inject content script into tabs where it can't auto-inject (new tab, etc.)

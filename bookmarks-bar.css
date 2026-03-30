@@ -320,9 +320,100 @@
   background: rgba(0,0,0,0.08);
 }
 
+/* Add/Edit dialog */
+.mrb-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: mrb-dropdown-in 0.1s ease;
+}
+.mrb-dialog {
+  background: var(--mrb-bg, #3b3b3f);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  padding: 16px 20px;
+  min-width: 320px;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 13px;
+  color: var(--mrb-text, #e8eaed);
+}
+.mrb-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.mrb-dialog label {
+  display: block;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+.mrb-dialog input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 5px;
+  background: rgba(0,0,0,0.25);
+  color: var(--mrb-text, #e8eaed);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.mrb-dialog input:focus {
+  border-color: rgba(138,180,248,0.6);
+}
+.mrb-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.mrb-dialog-buttons button {
+  padding: 5px 14px;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--mrb-text, #e8eaed);
+  background: rgba(255,255,255,0.1);
+}
+.mrb-dialog-buttons button:hover {
+  background: rgba(255,255,255,0.16);
+}
+.mrb-dialog-buttons button.mrb-btn-primary {
+  background: #8ab4f8;
+  color: #202124;
+}
+.mrb-dialog-buttons button.mrb-btn-primary:hover {
+  background: #aecbfa;
+}
+.mrb-dialog-light {
+  border-color: rgba(0,0,0,0.12);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+}
+.mrb-dialog-light input {
+  border-color: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.05);
+}
+.mrb-dialog-light .mrb-dialog-buttons button {
+  background: rgba(0,0,0,0.08);
+  color: inherit;
+}
+.mrb-dialog-light .mrb-dialog-buttons button:hover {
+  background: rgba(0,0,0,0.14);
+}
+
 html.mrb-active {
   margin-top: var(--mrb-height, 56px) !important;
-  height: calc(100% - var(--mrb-height, 56px)) !important;
 }
 html.mrb-active > body {
   /* transform creates a containing block for fixed-position children,

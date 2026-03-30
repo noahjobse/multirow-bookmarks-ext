@@ -105,9 +105,17 @@
 
   // ─── Bookmarks Bar ──────────────────────────────────
   let dragSrcId = null;
+  let barRootId = null;
 
   const bar = document.createElement("div");
   bar.id = "mrb-bar";
+
+  // Right-click on empty bar area
+  bar.addEventListener("contextmenu", (e) => {
+    if (e.target === bar || e.target.classList.contains("mrb-row-break")) {
+      showContextMenu(e, null);
+    }
+  });
 
   // Always snap drop indicator to nearest item
   bar.addEventListener("dragover", (e) => {
@@ -367,6 +375,22 @@
               dropdown.style.top = Math.max(0, window.innerHeight - dr.height) + "px";
             }
           });
+        } else {
+          dropdown.style.left = "";
+          dropdown.style.right = "";
+          requestAnimationFrame(() => {
+            const dr = dropdown.getBoundingClientRect();
+            if (dr.right > window.innerWidth) {
+              dropdown.style.left = "auto";
+              dropdown.style.right = "0";
+            } else {
+              dropdown.style.left = "0";
+              dropdown.style.right = "auto";
+            }
+            if (dr.bottom > window.innerHeight) {
+              dropdown.style.maxHeight = (window.innerHeight - dr.top - 8) + "px";
+            }
+          });
         }
       });
 
@@ -386,6 +410,7 @@
     );
 
     if (!bookmarksBar || !bookmarksBar.children) return;
+    barRootId = bookmarksBar.id;
 
     const items = bookmarksBar.children;
 
@@ -464,14 +489,14 @@
 
     const items = [];
 
-    if (node.url) {
+    if (node && node.url) {
       items.push({ label: "Open in new tab", action: () => window.open(node.url, "_blank") });
       items.push({ label: "Open in new window", action: () => window.open(node.url, "_blank", "noopener") });
       items.push({ type: "separator" });
       items.push({ label: "Rename...", action: () => renameBookmark(node) });
       items.push({ label: "Edit URL...", action: () => editBookmarkUrl(node) });
       items.push({ label: "Delete", action: () => chrome.bookmarks.remove(node.id) });
-    } else if (node.children) {
+    } else if (node && node.children) {
       items.push({ label: "Open all in tabs", action: () => {
         node.children.filter(c => c.url).forEach(c => window.open(c.url, "_blank"));
       }});
@@ -480,11 +505,11 @@
       items.push({ label: "Delete folder", action: () => chrome.bookmarks.removeTree(node.id) });
     }
 
-    items.push({ type: "separator" });
+    if (node) items.push({ type: "separator" });
     items.push({ label: "Add bookmark...", action: () => addBookmark(node) });
     items.push({ label: "Add folder...", action: () => addFolder(node) });
     items.push({ type: "separator" });
-    items.push({ label: "Bookmark manager", action: () => window.open("chrome://bookmarks", "_blank") });
+    items.push({ label: "Bookmark manager", action: () => chrome.tabs.create({ url: "chrome://bookmarks" }) });
 
     items.forEach((item) => {
       if (item.type === "separator") {
@@ -512,36 +537,118 @@
   }
 
   function renameBookmark(node) {
-    const title = prompt("Bookmark name:", node.title || "");
-    if (title === null) return;
-    chrome.bookmarks.update(node.id, { title });
+    showDialog({
+      title: "Rename bookmark",
+      fields: [{ key: "title", label: "Name", value: node.title || "" }],
+      onSave: ({ title }) => {
+        chrome.bookmarks.update(node.id, { title });
+      },
+    });
   }
 
   function editBookmarkUrl(node) {
-    const url = prompt("URL:", node.url || "");
-    if (url === null) return;
-    chrome.bookmarks.update(node.id, { url });
+    showDialog({
+      title: "Edit URL",
+      fields: [{ key: "url", label: "URL", value: node.url || "" }],
+      onSave: ({ url }) => {
+        chrome.bookmarks.update(node.id, { url });
+      },
+    });
   }
 
   function editFolder(node) {
-    const title = prompt("Folder name:", node.title || "");
-    if (title === null) return;
-    chrome.bookmarks.update(node.id, { title });
+    showDialog({
+      title: "Rename folder",
+      fields: [{ key: "title", label: "Name", value: node.title || "" }],
+      onSave: ({ title }) => {
+        chrome.bookmarks.update(node.id, { title });
+      },
+    });
+  }
+
+  function showDialog({ title: dlgTitle, fields, onSave }) {
+    const isLight = bar.classList.contains("mrb-light");
+    const overlay = document.createElement("div");
+    overlay.className = "mrb-dialog-overlay";
+
+    const dialog = document.createElement("div");
+    dialog.className = "mrb-dialog" + (isLight ? " mrb-dialog-light" : "");
+
+    const heading = document.createElement("div");
+    heading.className = "mrb-dialog-title";
+    heading.textContent = dlgTitle;
+    dialog.appendChild(heading);
+
+    const inputs = {};
+    fields.forEach(({ key, label, placeholder, value }) => {
+      const lbl = document.createElement("label");
+      lbl.textContent = label;
+      dialog.appendChild(lbl);
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.placeholder = placeholder || "";
+      if (value) inp.value = value;
+      dialog.appendChild(inp);
+      inputs[key] = inp;
+    });
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "mrb-dialog-buttons";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.textContent = "Cancel";
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "mrb-btn-primary";
+    saveBtn.textContent = "Save";
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(saveBtn);
+    dialog.appendChild(btnRow);
+    overlay.appendChild(dialog);
+
+    const close = () => overlay.remove();
+    const save = () => {
+      const values = {};
+      for (const k in inputs) values[k] = inputs[k].value.trim();
+      if (Object.values(values).every(Boolean)) {
+        onSave(values);
+      }
+      close();
+    };
+
+    cancelBtn.addEventListener("click", close);
+    saveBtn.addEventListener("click", save);
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") close();
+      if (e.key === "Enter") save();
+    });
+
+    document.body.appendChild(overlay);
+    const firstInput = Object.values(inputs)[0];
+    if (firstInput) firstInput.focus();
   }
 
   function addBookmark(node) {
-    const title = prompt("New bookmark name:");
-    if (!title) return;
-    const url = prompt("URL:");
-    if (!url) return;
-    const parentId = node.children ? node.id : node.parentId;
-    chrome.bookmarks.create({ parentId, title, url });
+    const parentId = node ? (node.children ? node.id : node.parentId) : barRootId;
+    showDialog({
+      title: "Add bookmark",
+      fields: [
+        { key: "title", label: "Name", placeholder: "Bookmark name" },
+        { key: "url", label: "URL", placeholder: "https://" },
+      ],
+      onSave: ({ title, url }) => {
+        chrome.bookmarks.create({ parentId, title, url });
+      },
+    });
   }
 
   function addFolder(node) {
-    const title = prompt("New folder name:");
-    if (!title) return;
-    const parentId = node.children ? node.id : node.parentId;
-    chrome.bookmarks.create({ parentId, title });
+    const parentId = node ? (node.children ? node.id : node.parentId) : barRootId;
+    showDialog({
+      title: "Add folder",
+      fields: [{ key: "title", label: "Name", placeholder: "Folder name" }],
+      onSave: ({ title }) => {
+        chrome.bookmarks.create({ parentId, title });
+      },
+    });
   }
 })();
